@@ -1,0 +1,4 @@
+models/
+*.gguf
+
+/input_pdfs/

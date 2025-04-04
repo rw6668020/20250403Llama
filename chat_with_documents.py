@@ -1,10 +1,14 @@
 # chat_with_documents.py
 # Chat with your OCR'd and analyzed PDF content using local LLaMA + Chroma (GPU-enabled)
 
+import os
 import chromadb
 from chromadb.utils import embedding_functions
 from llama_cpp import Llama
 import readline  # for command history in CLI
+
+# Force CUDA environment
+os.environ["LLAMA_CUBLAS"] = "1"
 
 # --- CONFIG ---
 MODEL_PATH = "./models/codellama-70b-instruct.Q4_K_M.gguf"
@@ -17,8 +21,17 @@ client = chromadb.Client()
 collection = client.get_or_create_collection(COLLECTION_NAME)
 embedding_fn = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=EMBED_MODEL)
 
-print("🤖 Loading LLaMA model with GPU support (this may take a few seconds)...")
-llm = Llama(model_path=MODEL_PATH, n_gpu_layers=-1, n_ctx=4096, use_mlock=True, n_threads=8)
+print("🤖 Loading LLaMA model with dual GPU support (this may take a few seconds)...")
+llm = Llama(
+    model_path=MODEL_PATH,
+    n_gpu_layers=80,     # Explicitly specify the number of layers to offload
+    n_batch=512,         # Increased batch size for better throughput
+    n_ctx=2048,          # Reduced context size to save memory
+    offload_kqv=True,    # Offload KQV matrices to GPU
+    seed=42,             # Set a seed for reproducibility
+    n_threads=4,         # Reduced thread count
+    verbose=True         # Enable verbose output for debugging
+)
 
 # --- CHAT LOOP ---
 def retrieve_relevant_chunks(query: str, n=4):

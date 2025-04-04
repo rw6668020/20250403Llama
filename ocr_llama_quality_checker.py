@@ -17,7 +17,16 @@ MODEL_PATH = "./models/llama-3-70b.Q4_K_M.gguf"  # Change to your quantized mode
 PROMPT_TEMPLATE = "./ocr_analysis_prompt.txt"
 
 # --- SETUP ---
-llm = Llama(model_path=MODEL_PATH, n_gpu_layers=-1, n_ctx=4096)
+llm = Llama(
+    model_path=MODEL_PATH,
+    n_gpu_layers=-1,     # Use all layers on GPU
+    n_batch=512,         # Increased batch size for better throughput
+    n_ctx=4096,          # Context window size
+    offload_kqv=True,    # Offload KQV matrices to GPU
+    use_mlock=True,      # Lock memory to prevent swapping
+    n_threads=8          # CPU threads for operations
+)
+
 client = chromadb.Client()
 client.delete_collection("ocr_memory")
 memories = client.create_collection("ocr_memory")
